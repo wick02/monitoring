@@ -24,34 +24,50 @@ brew install promtail
 
 1. Start Logs backend in a terminal
 
+Not necessary to include the `scale` parts but wanted to show how to do so 
+
 ```
 cd loki 
-docker compose up --scale write=1 --scale read=1 # not necessary but I want everyone to know these are indended to scale
+docker compose up --scale write=1 --scale read=1 
 ```
 
 2. Start promtail stream in a terminal
+
+Configured out of the box to grab two containers based on name, nginx & sampleapi & creates a positions.yaml file.
+
 ```
 cd promtail
-./promtail --config.file=promtail.yaml # configured out of the box to grab two containers based on name, nginx & sampleapi
+promtail --config.file=promtail.yaml 
 ```
 
 3. Start Metrics backend in a terminal
+
+Necessary to have multiple replicas of each, so the scale is needed
+
 ```
 cd mimir
-docker compose up --scale ingester=3 --scale distributor=2 # necessary to have multiple replicas of each
+docker compose up --scale ingester=3 --scale distributor=2 
 ```
 
 4. Start Metrics feed prometheus in a terminal 
+
+Only feeds prometheus metrics currently, will be adding in cadvisor & sample application that publishes a scrap point for it
+
 ```
 cd prometheus
-docker compose up # Only feeds prometheus metrics currently, will be adding in cadvisor & sample application that publishes a scrap point for it
+docker compose up 
 ```
 
-5. Start Frontend in a terminal
+5. Start Dashboarding/Query Frontend in a terminal
+
 ```
 cd grafana
 docker compose up
 ```
+
+## Recommendation once everything is up
+
+Checkout grafana explore at http://localhost:3000/explore
 
 ## Services:
 
@@ -70,10 +86,6 @@ docker compose up
 * There are load balancers in front of both backends so you can get to them on your browser
 * Both Mimir and Loki use a service called minio to simulate an S3 like backend, it's intended that all provisioned storage is through that type of service that is flushed with loki and mimir over time. 
 * When you want to deploy to a cloud service, you already have a built in scaling by component for both Mimir and Loki 
-
-## Recommendation once everything is up
-
-Checkout grafana explore at http://localhost:3100/explore
 
 ### Clean up jobs
 
