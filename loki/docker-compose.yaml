@@ -59,8 +59,8 @@ services:
   gatewayloki:
     image: nginx:latest
     depends_on:
-      - readloki
-      - writeloki
+      - read
+      - write
     entrypoint:
       - sh
       - -euc
@@ -85,31 +85,31 @@ services:
             }
 
             location = /api/prom/push {
-              proxy_pass       http://writeloki:3100\$$request_uri;
+              proxy_pass       http://write:3100\$$request_uri;
             }
 
             location = /api/prom/tail {
-              proxy_pass       http://readloki:3100\$$request_uri;
+              proxy_pass       http://read:3100\$$request_uri;
               proxy_set_header Upgrade \$$http_upgrade;
               proxy_set_header Connection "upgrade";
             }
 
             location ~ /api/prom/.* {
-              proxy_pass       http://readloki:3100\$$request_uri;
+              proxy_pass       http://read:3100\$$request_uri;
             }
 
             location = /loki/api/v1/push {
-              proxy_pass       http://writeloki:3100\$$request_uri;
+              proxy_pass       http://write:3100\$$request_uri;
             }
 
             location = /loki/api/v1/tail {
-              proxy_pass       http://readloki:3100\$$request_uri;
+              proxy_pass       http://read:3100\$$request_uri;
               proxy_set_header Upgrade \$$http_upgrade;
               proxy_set_header Connection "upgrade";
             }
 
             location ~ /loki/api/.* {
-              proxy_pass       http://readloki:3100\$$request_uri;
+              proxy_pass       http://read:3100\$$request_uri;
             }
           }
         }
