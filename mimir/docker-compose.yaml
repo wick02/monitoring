@@ -1,0 +1,306 @@
+# used for local
+
+version: '3.8'
+
+networks:
+  mimir:
+    external: true
+
+services:
+  miniomimir:
+    image: minio/minio
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/mimir && \
+        minio server /data
+    environment:
+      - MINIO_ROOT_USER=mimir
+      - MINIO_ROOT_PASSWORD=supersecret
+      - MINIO_UPDATE=off
+    ports:
+      - 9000
+    volumes:
+      - ./.data/minio:/data
+    networks:
+      - mimir
+
+  gatewaymimir:
+    image: nginx:latest
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        cat <<EOF > /etc/nginx/nginx.conf
+        user  nginx;
+        worker_processes  16;  ## Default: 1
+        events {
+          worker_connections 1024;
+        }
+        http {
+          resolver 127.0.0.11;
+          server {
+            listen             9009;
+            location = / {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location ~ /static/.* {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /config {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /runtime_config {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /services {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /ready {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /metrics {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /debug/pprof {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /debug/fgprof {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /api/v1/status/buildinfo {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /memberlist {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /api/v1/user_limits {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /api/v1/push {
+              proxy_pass       http://distributor:8080\$$request_uri;
+            }
+            location = /otlp/v1/metrics {
+              proxy_pass       http://distributor:8080\$$request_uri;
+            }
+            location = /distributor/all_user_stats {
+              proxy_pass       http://distributor:8080\$$request_uri;
+            }
+            location = /distributor/ha_tracker {
+              proxy_pass       http://distributor:8080\$$request_uri;
+            }
+            location ~ /ingester/.* {
+              proxy_pass       http://ingester:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/query {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/query_exemplars {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/query_range {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/read {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/cardinality/label_names {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/cardinality/label_values {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/labels {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location ~ /prometheus/api/v1/label/.* {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/metadata {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/api/v1/series {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /api/v1/user_stats {
+              proxy_pass       http://querier:8080\$$request_uri;
+            }
+            location = /prometheus/config/v1/alerts {
+              proxy_pass       http://ruler:8080\$$request_uri;
+            }
+            location = /prometheus/config/v1/rules {
+              proxy_pass       http://ruler:8080\$$request_uri;
+            }
+            location ~ /prometheus/config/v1/rules/.* {
+              proxy_pass       http://ruler:8080\$$request_uri;
+            }
+            location = /ruler/delete_tenant_config {
+              proxy_pass       http://ruler:8080\$$request_uri;
+            }
+            location ~ /store-gateway/.* {
+              proxy_pass       http://store-gateway:8080\$$request_uri;
+            }
+            location = /compactor/ring {
+              proxy_pass       http://compactor:8080\$$request_uri;
+            }
+            location = /compactor/delete_tenant {
+              proxy_pass       http://compactor:8080\$$request_uri;
+            }
+            location = /compactor/delete_tenant_status {
+              proxy_pass       http://compactor:8080\$$request_uri;
+            }
+            location ~ /api/v1/upload/block/.* {
+              proxy_pass       http://compactor:8080\$$request_uri;
+            }
+            location = /api/v1/alerts {
+              proxy_pass       http://alertmanager:8080\$$request_uri;
+            }
+            location = /multitenant_alertmanager/status {
+              proxy_pass       http://alertmanager:8080\$$request_uri;
+            }
+            location = /multitenant_alertmanager/configs {
+              proxy_pass       http://alertmanager:8080\$$request_uri;
+            }
+            location = /multitenant_alertmanager/ring {
+              proxy_pass       http://alertmanager:8080\$$request_uri;
+            }
+          }
+        }
+        EOF
+        /docker-entrypoint.sh nginx -g "daemon off;"
+    depends_on:
+      - "ingester"
+      - "distributor"
+      - "querier"
+      - "ruler"
+      - "alertmanager"
+      - "compactor"
+      - "store-gateway"
+    ports:
+      - 9009:9009
+    networks:
+      - mimir
+
+  ingester:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=ingester"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - miniomimir
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
+  distributor:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=distributor"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - ingester
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
+  query-frontend:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=query-frontend"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - querier
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
+  querier:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=querier"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - store-gateway
+      - alertmanager
+      - compactor
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
+  ruler:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=ruler"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - miniomimir
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
+  alertmanager:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=alertmanager"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - miniomimir
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
+  compactor:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=compactor"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - miniomimir
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
+  store-gateway:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml -target=store-gateway"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - miniomimir
+    volumes:
+      - ./mimir.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      mimir:
+        aliases:
+          - mimir
