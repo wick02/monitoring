@@ -1,5 +1,8 @@
 # Added from Scot
 .data/
+positions.yaml
+node_modules/
+dist/
 
 # Binaries for programs and plugins
 *.exe
