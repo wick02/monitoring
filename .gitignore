@@ -1,3 +1,6 @@
+# Added from Scot
+.data/
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
