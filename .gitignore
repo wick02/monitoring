@@ -3,6 +3,7 @@
 positions.yaml
 node_modules/
 dist/
+.DS_Store
 
 # Binaries for programs and plugins
 *.exe
