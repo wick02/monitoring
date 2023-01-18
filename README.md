@@ -79,7 +79,27 @@ You will be able to query prometheus output through the Loki datasource for logs
 * Prometheus: http://localhost:9090
 * Grafana:    http://localhost:3000
 
-## What do we have?
+## Data source Screenshots to check to make sure things are working on Grafana:
+
+![Data Sources](docs/datasrc.png "Data Sources")
+
+![Loki](docs/lokidatasrc.png "Loki")
+
+![Mimir](docs/mimirdatasrc.png "Mimir")
+
+![PromMetrics](docs/prometheusmetrics.png "Metrics")
+
+![PromLogs](docs/prometheuslogs.png "Logs")
+
+### Data transfer through tenant with Prometheus and Promtail
+
+Our backend services use Tenant IDs through the header `X-Scope-OrgID`. Prometheus sends it's metrics through it's config file with `mimirlocal` & Promtail sends it's logs with `lokilocal`. Grafana is configured to use these. Use proper organization structure to keep environments clean by using these tenant IDs 
+
+### Secrets you need to be aware about
+
+Inside loki and mimir, they both use S3 storage points with an `access_key_id` and `secret_access_key` with access their own "S3" bucket. Be sure to handle these parts properly with cloud deployment structure and secret management
+
+## Benefits and what you can accomplish with this demo as a starting point
 
 * Logs will be captured from the promtail config file to loki
 * Metrics are captured through prometheus and sent to mimir
@@ -88,6 +108,7 @@ You will be able to query prometheus output through the Loki datasource for logs
 * There are load balancers in front of both backends so you can get to them on your browser
 * Both Mimir and Loki use a service called minio to simulate an S3 like backend, it's intended that all provisioned storage is through that type of service that is flushed with loki and mimir over time. 
 * When you want to deploy to a cloud service, you already have a built in scaling by component for both Mimir and Loki 
+
 
 ### Clean up jobs
 
