@@ -33,7 +33,7 @@ docker compose up --scale write=1 --scale read=1
 
 2. Start promtail stream in a terminal
 
-Configured out of the box to grab two containers based on name, nginx & sampleapi & creates a positions.yaml file.
+Configured out of the box to grab prometheus logs due to the name of the container & creates a positions.yaml file.
 
 ```
 cd promtail
@@ -68,6 +68,8 @@ docker compose up
 ## Recommendation once everything is up
 
 Checkout grafana explore at http://localhost:3000/explore
+
+You will be able to query prometheus output through the Loki datasource for logs & Mimir for metrics 
 
 ## Services:
 
