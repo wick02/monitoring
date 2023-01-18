@@ -74,3 +74,26 @@ docker compose up
 ## Recommendation once everything is up
 
 Checkout grafana explore at http://localhost:3100/explore
+
+### Clean up jobs
+
+All the data should be saved in .data/ for mimir and loki. That data doesn't not actually get saved until you flush either backend to be saved
+
+#### Docker parts
+
+* Clean up containers: `docker ps -qa | xargs docker rm`
+* Clean up images: `docker images -q | xargs docker rmi`
+* Clean up networks: `docker network prune` 
+* Force destroy **all** docker components: `docker system prune --all --force --volumes` 
+
+### Footnotes and references
+
+I feel like people are intimidated with Kubernetes and the high requirements of other services. I wanted to get something approachable that includes sample applications like a node service, a python app or something along those lines. I will be including cadvisor and sample applications to showcase everything
+
+This was inspired by a few tutorials and demos. 
+
+* Play with Mimir: https://grafana.com/tutorials/play-with-grafana-mimir/
+* Loki getting started: https://github.com/grafana/loki/tree/main/examples/getting-started
+* New in Grafana 2.4 https://www.youtube.com/watch?v=M8nYWBpbwWg 
+* Ward Bekker's gist: https://gist.github.com/wardbekker/6abde118f530a725e60acb5adb04508a
+* Getting started with Grafana Mimir: https://www.youtube.com/watch?v=pTkeucnnoJg  
