@@ -10,24 +10,13 @@ clients:
     tenant_id: lokilocal
 
 scrape_configs:
-  - job_name: nginx_scrape # Can have multiple scrap
+  - job_name: prometheus_scrape # Can have
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
         filters:
           - name: name
-            values: [nginx] # Scraps the logs of this container name
-    relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(.*)'
-        target_label: 'container'
-  - job_name: portalapi_scrape # Can have multiple scrap
-    docker_sd_configs:
-      - host: unix:///var/run/docker.sock
-        refresh_interval: 5s
-        filters:
-          - name: name
-            values: [sampleapi] # Scraps the logs of this container name
+            values: [prometheus] # Scraps the logs of this container name
     relabel_configs:
       - source_labels: ['__meta_docker_container_name']
         regex: '/(.*)'
