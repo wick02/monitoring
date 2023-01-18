@@ -1,6 +1,6 @@
 # Monitoring Demo
 
-Get a monitoring station up and available. Seperated out into their own docker compose services that can be scaled up with the --scale feature
+Get a monitoring station up and available. Seperated out into their own docker compose services that can be scaled up with the --scale feature. Allow anyone to have a monitoring setup locally and configured in a manner that an operations team can handle.
 
 ## Pre reqs:
 
@@ -68,6 +68,7 @@ docker compose up
 * Grafana has both data sources defined when brought up, you can start adjusting your prometheus config and promtail config to add in your other 
 * All services are scalable because they are defined using gRPC communcation to talk with each other.
 * There are load balancers in front of both backends so you can get to them on your browser
+* Both Mimir and Loki use a service called minio to simulate an S3 like backend, it's intended that all provisioned storage is through that type of service that is flushed with loki and mimir over time. 
 * When you want to deploy to a cloud service, you already have a built in scaling by component for both Mimir and Loki 
 
 ## Recommendation once everything is up
