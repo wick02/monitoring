@@ -74,7 +74,7 @@ You will be able to query prometheus output through the Loki datasource for logs
 ## Services:
 
 * Loki:       http://localhost:3100
-* Promtail
+* Promtail    http://localhost:9800
 * Mimir:      http://localhost:9009
 * Prometheus: http://localhost:9090
 * Grafana:    http://localhost:3000
