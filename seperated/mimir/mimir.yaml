@@ -1,0 +1,28 @@
+target: all,alertmanager,overrides-exporter
+
+server:
+  http_listen_port: 8080
+  grpc_listen_port: 9095
+  http_server_read_timeout: 10m
+  http_server_write_timeout: 10m
+  http_server_idle_timeout: 10m
+memberlist:
+  join_members:
+    [mimir:7946]
+common:
+  storage:
+    backend: s3
+    s3:
+      endpoint: miniomimir:9000
+      insecure: true
+      access_key_id: mimir
+      secret_access_key: supersecret
+      bucket_name: mimir
+alertmanager:
+  external_url: http://localhost:9009/alertmanager
+blocks_storage:
+  storage_prefix: blocks
+ruler_storage:
+  storage_prefix: ruler
+alertmanager_storage:
+  storage_prefix: alertmanager

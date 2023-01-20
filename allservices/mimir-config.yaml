@@ -8,7 +8,7 @@ server:
   http_server_idle_timeout: 10m
 memberlist:
   join_members:
-    [distributor:7946,query-frontend:7946,querier:7946,ingester:7946,compactor:7946,alertmanager:7946,store-gateway:7946]
+    [mimir:7946]
 common:
   storage:
     backend: s3

@@ -1,0 +1,246 @@
+version: "3.8"
+
+networks:
+  allservices:
+    external: true
+
+services:
+  loki:
+    image: grafana/loki:2.7.1
+    command: "-config.file=/etc/loki/config.yaml"
+    ports:
+      - 3200
+      - 7946
+      - 9095
+    volumes:
+      - ./loki-config.yaml:/etc/loki/config.yaml
+    depends_on:
+      - minioloki
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: &loki-dns
+      allservices:
+        aliases:
+          - loki
+
+  minioloki:
+    image: minio/minio
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/loki-data && \
+        mkdir -p /data/loki-ruler && \
+        minio server /data
+    environment:
+      - MINIO_ACCESS_KEY=loki
+      - MINIO_SECRET_KEY=supersecret
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
+      - MINIO_UPDATE=off
+    ports:
+      - 9000
+    volumes:
+      - ./.dataloki/minio:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 20s
+      retries: 5
+    networks:
+      - allservices
+
+  gatewayloki:
+    image: nginx:latest
+    depends_on:
+      - loki 
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        cat <<EOF > /etc/nginx/nginx.conf
+        user  nginx;
+        worker_processes  16;  ## Default: 1
+
+        events {
+          worker_connections   1000;
+        }
+
+        http {
+          resolver 127.0.0.11;
+          upstream backend {
+            server loki:3200 max_fails=1 fail_timeout=1s;
+          }
+          server {
+            listen 3100;
+            access_log /dev/null;
+            location / {
+                proxy_pass http://backend;
+            }
+          }
+        }
+        EOF
+        /docker-entrypoint.sh nginx -g "daemon off;"
+    healthcheck:
+      test: ["CMD", "service", "nginx", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "3100:3100"
+    networks:
+      - allservices
+
+  promtail:
+    image: grafana/promtail:2.7.1
+    command: -config.file=/etc/promtail/config.yaml
+    volumes:
+      - ./promtail.yaml:/etc/promtail/config.yaml
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - gatewayloki
+    networks:
+      - allservices
+
+  mimir:
+    image: grafana/mimir:2.5.0
+    command: "-config.file=/etc/mimir.yaml"
+    ports:
+      - 8080
+      - 7946
+      - 9095
+    depends_on:
+      - miniomimir
+    volumes:
+      - ./mimir-config.yaml:/etc/mimir.yaml
+    networks: &mimir-dns
+      allservices:
+        aliases:
+          - mimir
+
+  miniomimir:
+    image: minio/minio
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /data/mimir && \
+        minio server /data
+    environment:
+      - MINIO_ROOT_USER=mimir
+      - MINIO_ROOT_PASSWORD=supersecret
+      - MINIO_UPDATE=off
+    ports:
+      - 9000
+    volumes:
+      - ./.datamimir/minio:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 15s
+      timeout: 20s
+      retries: 5
+    networks:
+      - allservices
+
+  gatewaymimir:
+    image: nginx:latest
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        cat <<EOF > /etc/nginx/nginx.conf
+        user  nginx;
+        worker_processes  16;  ## Default: 1
+        events {
+          worker_connections 1024;
+        }
+        http {
+          resolver 127.0.0.11;
+          upstream backend {
+            server mimir:8080 max_fails=1 fail_timeout=1s;
+          }
+          server {
+            listen 9009;
+            access_log /dev/null;
+            location / {
+                proxy_pass http://backend;
+            }
+          }
+        }
+        EOF
+        /docker-entrypoint.sh nginx -g "daemon off;"
+    depends_on:
+      - "mimir"
+    ports:
+      - 9009:9009
+    healthcheck:
+      test: ["CMD", "service", "nginx", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - allservices
+
+  prometheus:
+    image: prom/prometheus:v2.41.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --log.level=info
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - allservices 
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_USERS_DEFAULT_THEME=light
+      - GF_LOG_MODE=console
+      - GF_LOG_LEVEL=critical
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+          - name: Loki
+            type: loki
+            access: proxy
+            url: http://gatewayloki:3100
+            jsonData:
+              httpHeaderName1: "X-Scope-OrgID"
+            secureJsonData:
+              httpHeaderValue1: "lokilocal"
+          - name: Mimir
+            type: prometheus
+            url: http://gatewaymimir:9009/prometheus
+            jsonData:
+              httpHeaderName1: "X-Scope-OrgID"
+            secureJsonData:
+              httpHeaderValue1: "mimirlocal"
+        EOF
+        /run.sh
+    depends_on:
+      - gatewayloki
+      - gatewaymimir
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "3000:3000"
+    networks:
+      - allservices 

@@ -1,5 +1,7 @@
 # Added from Scot
 .data/
+.dataloki/
+.datamimir/
 positions.yaml
 node_modules/
 dist/
