@@ -9,7 +9,7 @@ Get a monitoring station up and available. Seperated out into their own docker c
 
 Follow instructions in the allservices directory to get a simple turn key solution on your machine
 
-## Seperated
+## Separated
 
 Follow the instructions to get a little more grandular and a structure where you can deploy in Cloud services with the ability to scale up and down
 
