@@ -208,10 +208,8 @@ services:
       - ingester
     volumes:
       - ./mimir.yaml:/etc/mimir.yaml
-    networks: &mimir-dns
-      mimir:
-        aliases:
-          - mimir
+    networks:
+      <<: *mimir-dns
   query-frontend:
     image: grafana/mimir:2.5.0
     command: "-config.file=/etc/mimir.yaml -target=query-frontend"
@@ -223,10 +221,8 @@ services:
       - querier
     volumes:
       - ./mimir.yaml:/etc/mimir.yaml
-    networks: &mimir-dns
-      mimir:
-        aliases:
-          - mimir
+    networks:
+      <<: *mimir-dns
   querier:
     image: grafana/mimir:2.5.0
     command: "-config.file=/etc/mimir.yaml -target=querier"
@@ -240,10 +236,8 @@ services:
       - compactor
     volumes:
       - ./mimir.yaml:/etc/mimir.yaml
-    networks: &mimir-dns
-      mimir:
-        aliases:
-          - mimir
+    networks:
+      <<: *mimir-dns
   ruler:
     image: grafana/mimir:2.5.0
     command: "-config.file=/etc/mimir.yaml -target=ruler"
@@ -255,10 +249,8 @@ services:
       - miniomimir
     volumes:
       - ./mimir.yaml:/etc/mimir.yaml
-    networks: &mimir-dns
-      mimir:
-        aliases:
-          - mimir
+    networks:
+      <<: *mimir-dns
   alertmanager:
     image: grafana/mimir:2.5.0
     command: "-config.file=/etc/mimir.yaml -target=alertmanager"
@@ -270,10 +262,8 @@ services:
       - miniomimir
     volumes:
       - ./mimir.yaml:/etc/mimir.yaml
-    networks: &mimir-dns
-      mimir:
-        aliases:
-          - mimir
+    networks:
+      <<: *mimir-dns
   compactor:
     image: grafana/mimir:2.5.0
     command: "-config.file=/etc/mimir.yaml -target=compactor"
@@ -285,10 +275,8 @@ services:
       - miniomimir
     volumes:
       - ./mimir.yaml:/etc/mimir.yaml
-    networks: &mimir-dns
-      mimir:
-        aliases:
-          - mimir
+    networks:
+      <<: *mimir-dns
   store-gateway:
     image: grafana/mimir:2.5.0
     command: "-config.file=/etc/mimir.yaml -target=store-gateway"
@@ -300,7 +288,5 @@ services:
       - miniomimir
     volumes:
       - ./mimir.yaml:/etc/mimir.yaml
-    networks: &mimir-dns
-      mimir:
-        aliases:
-          - mimir
+    networks:
+      <<: *mimir-dns

@@ -2,17 +2,68 @@
 
 Get a monitoring station up and available. Seperated out into their own docker compose services that can be scaled up with the --scale feature. Allow anyone to have a monitoring setup locally and configured in a manner that an operations team can handle.
 
+## Pre reqs:
 
-# Two options to run
+* Docker
+* Docker compose 
+* Promtail (Using brew on mac in this demo)
 
-## All services
+## How to run:
 
-Follow instructions in the allservices directory to get a simple turn key solution on your machine
+Clone the repo and follow these steps
 
-## Seperated
+0. Create networks for docker
 
-Follow the instructions to get a little more grandular and a structure where you can deploy in Cloud services with the ability to scale up and down
+Seperating each service so it's independent from another. There are other ways to handle the networking, this is done so killing a "docker compose up" doesn't kill the other services because they are attaching to the other networks 
 
+```
+docker network create loki
+docker network create mimir
+brew install promtail
+```
+
+1. Start Logs backend in a terminal
+
+Not necessary to include the `scale` parts but wanted to show how to do so 
+
+```
+cd loki 
+docker compose up --scale write=1 --scale read=1 
+```
+
+2. Start promtail stream in a terminal
+
+Configured out of the box to grab prometheus logs due to the name of the container & creates a positions.yaml file.
+
+```
+cd promtail
+promtail --config.file=promtail.yaml 
+```
+
+3. Start Metrics backend in a terminal
+
+Necessary to have multiple replicas of each, so the scale is needed
+
+```
+cd mimir
+docker compose up --scale ingester=3 --scale distributor=2 
+```
+
+4. Start Metrics feed prometheus in a terminal 
+
+Only feeds prometheus metrics currently, will be adding in cadvisor & sample application that publishes a scrap point for it
+
+```
+cd prometheus
+docker compose up 
+```
+
+5. Start Dashboarding/Query Frontend in a terminal
+
+```
+cd grafana
+docker compose up
+```
 
 ## Recommendation once everything is up
 
@@ -78,6 +129,6 @@ This was inspired by a few tutorials and demos.
 
 * Play with Mimir: https://grafana.com/tutorials/play-with-grafana-mimir/
 * Loki getting started: https://github.com/grafana/loki/tree/main/examples/getting-started
-* New in Grafana Loki 2.4 https://www.youtube.com/watch?v=M8nYWBpbwWg 
+* New in Grafana 2.4 https://www.youtube.com/watch?v=M8nYWBpbwWg 
 * Ward Bekker's gist: https://gist.github.com/wardbekker/6abde118f530a725e60acb5adb04508a
 * Getting started with Grafana Mimir: https://www.youtube.com/watch?v=pTkeucnnoJg  
